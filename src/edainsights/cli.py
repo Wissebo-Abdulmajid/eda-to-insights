@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
+import pandas as pd
 import typer
 from rich.console import Console
 
 from edainsights.config import load_config
 from edainsights.io import load_table, make_run_context
+from edainsights.profiling import ProfileConfig, profile_table
+from edainsights.quality.runner import run_quality_checks
 from edainsights.utils.hashing import file_sha256
 from edainsights.utils.logging import setup_logger
 
@@ -33,11 +37,15 @@ def run(
     logger.info("Config path: %s", config)
     logger.info("Output dir: %s", out)
 
+    # -------------------------
     # Load
+    # -------------------------
     df = load_table(data, cfg)
     logger.info("Loaded dataset: rows=%d cols=%d", df.shape[0], df.shape[1])
 
+    # -------------------------
     # Run metadata (audit trail)
+    # -------------------------
     meta = {
         "project": {"name": cfg.project.name, "version": cfg.project.version},
         "run": {"run_id": ctx.run_id, "started_at_utc": ctx.started_at_utc},
@@ -50,8 +58,8 @@ def run(
         },
         "config_path": str(config),
         "notes": [
-            "This run only validates config + loads data + writes run metadata.",
-            "Quality checks and profiling are added in later milestones.",
+            "This run loads data, runs data-quality checks, generates a profiling summary, and writes artifacts.",
+            "Visualization and full HTML reporting will be added in later milestones.",
         ],
     }
 
@@ -59,11 +67,88 @@ def run(
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     logger.info("Wrote: %s", meta_path)
 
+    # -------------------------
     # Preview export (small sample, safe)
+    # -------------------------
     preview_rows = min(cfg.reporting.sample_rows, len(df))
     preview_path = ctx.artifacts_dir / "preview.csv"
     df.head(preview_rows).to_csv(preview_path, index=False)
     logger.info("Wrote: %s (rows=%d)", preview_path, preview_rows)
+
+    # -------------------------
+    # Milestone B: Quality checks
+    # -------------------------
+    issues = run_quality_checks(
+        df=df,
+        missing_threshold=cfg.quality.missing_threshold,
+    )
+    logger.info("Quality checks complete: issues=%d", len(issues))
+
+    # Write issues.csv
+    issues_path = ctx.artifacts_dir / "issues.csv"
+    with open(issues_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=["column", "issue_type", "severity", "message", "metric"],
+        )
+        writer.writeheader()
+        for issue in issues:
+            writer.writerow(issue.__dict__)
+    logger.info("Wrote: %s", issues_path)
+
+    # Write quality_summary.json
+    summary = {
+        "total_issues": len(issues),
+        "by_severity": {
+            "error": sum(i.severity == "error" for i in issues),
+            "warning": sum(i.severity == "warning" for i in issues),
+            "info": sum(i.severity == "info" for i in issues),
+        },
+        "missing_threshold": float(cfg.quality.missing_threshold),
+    }
+
+    summary_path = ctx.artifacts_dir / "quality_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    logger.info("Wrote: %s", summary_path)
+
+    # -------------------------
+    # Milestone C: Profiling (CONFIG-DRIVEN)
+    # -------------------------
+    prof_cfg = ProfileConfig(
+        max_unique_for_categorical=cfg.profiling.top_k_categories,
+        max_value_counts_rows=cfg.profiling.top_k_categories,
+        correlation_method=cfg.profiling.corr_method,
+    )
+    prof = profile_table(df, prof_cfg)
+
+    # 1) dataset-level summary JSON
+    profile_summary_path = ctx.artifacts_dir / "profile_summary.json"
+    profile_summary_path.write_text(
+        json.dumps(prof["dataset_summary"], indent=2),
+        encoding="utf-8",
+    )
+    logger.info("Wrote: %s", profile_summary_path)
+
+    # 2) per-column profile CSV
+    col_profile_path = ctx.artifacts_dir / "column_profile.csv"
+    prof["column_profile"].to_csv(col_profile_path, index=False)
+    logger.info("Wrote: %s", col_profile_path)
+
+    # 3) numeric correlation CSV
+    corr_path = ctx.artifacts_dir / "correlation_numeric.csv"
+    if not prof["corr_numeric"].empty:
+        prof["corr_numeric"].to_csv(corr_path)
+        logger.info("Wrote: %s", corr_path)
+    else:
+        pd.DataFrame().to_csv(corr_path, index=False)
+        logger.info("Wrote: %s (empty)", corr_path)
+
+    # 4) bounded value-counts files (categorical-ish)
+    for col, vc_df in prof["value_counts"].items():
+        safe = "".join(ch if ch.isalnum() or ch in ("_", "-") else "_" for ch in col)[:80]
+        vc_path = ctx.artifacts_dir / f"value_counts__{safe}.csv"
+        vc_df.to_csv(vc_path, index=False)
+        logger.info("Wrote: %s", vc_path)
 
     console.print("[green]Run complete.[/green]")
     console.print(f"Artifacts: {ctx.artifacts_dir}")

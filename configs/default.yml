@@ -12,6 +12,7 @@ quality:
   missingness_warn: 0.05
   missingness_fail: 0.40
   duplicate_warn: 0.01
+  missing_threshold: 0.10
 
 profiling:
   top_k_categories: 10
