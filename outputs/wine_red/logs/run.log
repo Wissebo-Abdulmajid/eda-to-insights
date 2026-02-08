@@ -1,0 +1,7 @@
+2026-02-08 16:49:03 | INFO | Starting run_id=2026-02-08T08-49-03Z
+2026-02-08 16:49:03 | INFO | Data path: data\raw\winequality-red.csv
+2026-02-08 16:49:03 | INFO | Config path: configs\default.yml
+2026-02-08 16:49:03 | INFO | Output dir: outputs\wine_red
+2026-02-08 16:49:03 | INFO | Loaded dataset: rows=1599 cols=12
+2026-02-08 16:49:03 | INFO | Wrote: outputs\wine_red\artifacts\run_metadata.json
+2026-02-08 16:49:03 | INFO | Wrote: outputs\wine_red\artifacts\preview.csv (rows=20)

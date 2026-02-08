@@ -1,0 +1,35 @@
+{
+  "project": {
+    "name": "EDA-to-Insights Framework",
+    "version": "0.1.0"
+  },
+  "run": {
+    "run_id": "2026-02-08T08-49-03Z",
+    "started_at_utc": "2026-02-08T08-49-03Z"
+  },
+  "input": {
+    "data_path": "data\\raw\\winequality-red.csv",
+    "data_sha256": "4a402cf041b025d4566d954c3b9ba8635a3a8a01e039005d97d6a710278cf05e",
+    "rows": 1599,
+    "cols": 12,
+    "columns": [
+      "fixed acidity",
+      "volatile acidity",
+      "citric acid",
+      "residual sugar",
+      "chlorides",
+      "free sulfur dioxide",
+      "total sulfur dioxide",
+      "density",
+      "pH",
+      "sulphates",
+      "alcohol",
+      "quality"
+    ]
+  },
+  "config_path": "configs\\default.yml",
+  "notes": [
+    "This run only validates config + loads data + writes run metadata.",
+    "Quality checks and profiling are added in later milestones."
+  ]
+}

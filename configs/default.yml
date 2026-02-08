@@ -1,0 +1,24 @@
+project:
+  name: "EDA-to-Insights Framework"
+  version: "0.1.0"
+
+io:
+  format: "csv"
+  csv:
+    delimiter: ";"
+    encoding: "utf-8"
+
+quality:
+  missingness_warn: 0.05
+  missingness_fail: 0.40
+  duplicate_warn: 0.01
+
+profiling:
+  top_k_categories: 10
+  corr_method: "pearson"
+
+reporting:
+  sample_rows: 20
+  include_corr: true
+logging:
+  level: "INFO"
