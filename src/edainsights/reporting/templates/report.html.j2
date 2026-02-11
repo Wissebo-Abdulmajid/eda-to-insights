@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ project_name }} — Report {{ run_id }}</title>
+
+  <!-- Plotly (offline, embedded once) -->
+  {% if plotly_js_inline %}
+<script>
+  {{ plotly_js_inline | safe }}
+</script>
+{% endif %}
+
+  <style>
+    :root{
+      --bg:#0b1020;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(255,255,255,.045);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.68);
+      --border:rgba(255,255,255,.12);
+      --accent:#7aa2ff;
+      --warn:#ffd36a;
+      --danger:#ff7a7a;
+      --good:#6ee7b7;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+      --r:18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 500px at 10% 0%, rgba(122,162,255,.25), transparent),
+        radial-gradient(700px 500px at 90% 10%, rgba(255,122,122,.18), transparent),
+        var(--bg);
+      color:var(--text);
+    }
+    .wrap{ max-width:1160px; margin:0 auto; padding:28px 18px 70px; }
+    .header{
+      padding:18px;
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      box-shadow:var(--shadow);
+    }
+    h1{ margin:0; font-size:22px; letter-spacing:.2px; }
+    .sub{ margin-top:8px; color:var(--muted); font-size:13px; }
+    code{ color:rgba(255,255,255,.85); }
+
+    .kpis{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:12px;
+      margin-top:14px;
+    }
+    .kpi{
+      grid-column:span 12;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(0,0,0,.14);
+      padding:12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      min-height:54px;
+    }
+    .kpi .label{ color:var(--muted); font-size:12px; }
+    .kpi .value{ font-size:16px; font-weight:750; }
+    .kpi .hint{ color:var(--muted); font-size:12px; text-align:right; }
+    @media(min-width:980px){
+      .kpi{ grid-column:span 3; }
+    }
+
+    .tabs{
+      position:sticky;
+      top:0;
+      z-index:50;
+      margin-top:14px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(10,14,28,.85);
+      backdrop-filter: blur(10px);
+      box-shadow:0 8px 22px rgba(0,0,0,.25);
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .tabbtn{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      padding:8px 10px;
+      border-radius:999px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tabbtn.active{
+      color:var(--text);
+      border-color:rgba(122,162,255,.45);
+      box-shadow:0 0 0 2px rgba(122,162,255,.12) inset;
+    }
+    .tabspacer{ flex:1; }
+    .search{
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.18);
+      border-radius:999px;
+      padding:8px 10px;
+      color:var(--text);
+      font-size:12px;
+      outline:none;
+      min-width:230px;
+    }
+    .search::placeholder{ color:rgba(255,255,255,.45); }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(12,1fr);
+      gap:14px;
+      margin-top:14px;
+    }
+    .card{
+      grid-column:span 12;
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      background:var(--card);
+      padding:16px;
+    }
+    .card h2{ margin:0 0 10px 0; font-size:16px; }
+    .card .desc{ color:var(--muted); font-size:13px; line-height:1.45; margin:0 0 10px; }
+
+    .two{ grid-column:span 12; }
+    @media(min-width:980px){ .two{ grid-column:span 6; } }
+
+    .plot{ margin-top:10px; }
+    .foot{ margin-top:10px; color:var(--muted); font-size:12px; }
+
+    .insights{
+      display:grid;
+      gap:10px;
+    }
+    .insight{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(0,0,0,.14);
+    }
+    .itop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .title{
+      font-weight:750;
+      margin:0 0 6px 0;
+      font-size:14px;
+    }
+    .msg{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .badge{
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .badge.info{ color:var(--accent); border-color:rgba(122,162,255,.35); }
+    .badge.warning{ color:var(--warn); border-color:rgba(255,211,106,.35); }
+    .badge.action{ color:var(--danger); border-color:rgba(255,122,122,.35); }
+
+    .hidden{ display:none !important; }
+
+    .sectionTitle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+    .sectionTitle .mini{
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    a{ color:var(--accent); text-decoration:none; }
+    details summary{ list-style:none; }
+    details summary::-webkit-details-marker{ display:none; }
+    details[open] summary{ margin-bottom:8px; }
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- HEADER -->
+    <div class="header">
+      <h1>{{ project_name }} : Interactive EDA Report</h1>
+      <div class="sub">
+        Report ID: <b>{{ run_id }}</b>
+      </div>
+
+      <!-- KPI STRIP (robust keys) -->
+      <div class="kpis">
+        {% set rows = (profile_summary.n_rows if profile_summary and profile_summary.n_rows is defined else (profile_summary.rows if profile_summary and profile_summary.rows is defined else None)) %}
+        {% set cols = (profile_summary.n_cols if profile_summary and profile_summary.n_cols is defined else (profile_summary.cols if profile_summary and profile_summary.cols is defined else None)) %}
+        {% set nnum = (profile_summary.n_numeric if profile_summary and profile_summary.n_numeric is defined else (profile_summary.numeric_cols if profile_summary and profile_summary.numeric_cols is defined else None)) %}
+        {% set ncat = (profile_summary.n_categorical if profile_summary and profile_summary.n_categorical is defined else None) %}
+        {% set dup  = (profile_summary.duplicate_rows if profile_summary and profile_summary.duplicate_rows is defined else None) %}
+        {% set miss = (profile_summary.total_missing if profile_summary and profile_summary.total_missing is defined else None) %}
+
+        {% set issues = (quality_summary.total_issues if quality_summary and quality_summary.total_issues is defined else None) %}
+        {% set warn = (quality_summary.by_severity.warning if quality_summary and quality_summary.by_severity is defined else None) %}
+        {% set err  = (quality_summary.by_severity.error if quality_summary and quality_summary.by_severity is defined else None) %}
+
+        <div class="kpi">
+          <div>
+            <div class="label">Rows</div>
+            <div class="value">{{ rows if rows is not none else "—" }}</div>
+          </div>
+          <div class="hint">dataset size</div>
+        </div>
+
+        <div class="kpi">
+          <div>
+            <div class="label">Columns</div>
+            <div class="value">{{ cols if cols is not none else "—" }}</div>
+          </div>
+          <div class="hint">features</div>
+        </div>
+
+        <div class="kpi">
+          <div>
+            <div class="label">Missing cells</div>
+            <div class="value">{{ miss if miss is not none else "—" }}</div>
+          </div>
+          <div class="hint">overall completeness</div>
+        </div>
+
+        <div class="kpi">
+          <div>
+            <div class="label">Duplicates</div>
+            <div class="value">{{ dup if dup is not none else "—" }}</div>
+          </div>
+          <div class="hint">row-level repeats</div>
+        </div>
+      </div>
+
+      <!-- Optional: KPI plot strip (from html_report.py) -->
+      {% if charts.kpi_cards %}
+  <div class="card" style="margin-top:14px; background: var(--card2);">
+    <h2 style="margin:0 0 8px 0;">Run KPIs (interactive)</h2>
+    <div class="plot">{{ charts.kpi_cards | safe }}</div>
+  </div>
+{% endif %}
+
+    </div>
+
+    <!-- TABS + SEARCH -->
+    <div class="tabs">
+      <div class="tabbtn active" data-tab="narrative">Narrative</div>
+      <div class="tabbtn" data-tab="quality">Quality</div>
+      <div class="tabbtn" data-tab="relationships">Relationships</div>
+      <div class="tabbtn" data-tab="distributions">Distributions</div>
+      <div class="tabbtn" data-tab="details">Details</div>
+
+      <div class="tabspacer"></div>
+
+      <input id="insightSearch" class="search" placeholder="Search insights (e.g., missing, duplicates, correlation)"/>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="grid">
+
+      <!-- TAB: NARRATIVE -->
+      <div class="card tab narrative">
+        <div class="sectionTitle">
+          <h2 style="margin:0;">Executive Narrative</h2>
+          <div class="mini">Fast scan for stakeholders • Use tabs for technical depth</div>
+        </div>
+
+        <div class="insights" id="insightsList">
+          {% for ins in insights %}
+          <div class="insight" data-text="{{ (ins.title ~ ' ' ~ ins.message ~ ' ' ~ ins.severity)|lower }}">
+            <div class="itop">
+              <div>
+                <div class="title">{{ ins.title }}</div>
+              </div>
+              <span class="badge {{ ins.severity }}">{{ ins.severity }}</span>
+            </div>
+            <div class="msg">{{ ins.message }}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="foot" id="insightCount"></div>
+      </div>
+
+      <!-- TAB: QUALITY -->
+      <div class="card tab quality hidden">
+        <h2>Data Quality</h2>
+        <p class="desc">
+          Missingness, duplicates, and distribution risks. Use this to decide what to clean before modeling.
+        </p>
+
+        {% if charts.missingness_bar %}
+          <div class="plot">{{ charts.missingness_bar | safe }}</div>
+        {% else %}
+          <div class="foot">No missingness chart available (missing_frac not found in column_profile.csv).</div>
+        {% endif %}
+
+        {% if charts.missingness_heatmap %}
+          <div class="plot" style="margin-top:16px;">{{ charts.missingness_heatmap | safe }}</div>
+          <div class="foot">Heatmap patterns can hint at collection/system issues (block missingness, bursts, etc.).</div>
+        {% endif %}
+
+        {% if charts.box_outliers_overview %}
+          <div class="plot" style="margin-top:16px;">{{ charts.box_outliers_overview | safe }}</div>
+          <div class="foot">Outliers are not always “bad” — validate with domain realism before removing.</div>
+        {% endif %}
+
+        {% if charts.risk_bubbles %}
+          <div class="plot" style="margin-top:16px;">{{ charts.risk_bubbles | safe }}</div>
+          <div class="foot">This “risk map” combines skew + outliers + missingness to prioritize which columns need attention.</div>
+        {% endif %}
+
+        {% if charts.range_radar %}
+          <div class="plot" style="margin-top:16px;">{{ charts.range_radar | safe }}</div>
+          <div class="foot">Radar view uses p01→p99 spread to reveal variables with wide tails / unstable ranges.</div>
+        {% endif %}
+      </div>
+
+      <!-- TAB: RELATIONSHIPS -->
+      <div class="card tab relationships hidden">
+        <h2>Relationships & Structure</h2>
+        <p class="desc">
+          Explore how variables move together. Correlations are signals — not conclusions.
+        </p>
+
+        {% if charts.corr_heatmap %}
+          <div class="plot">{{ charts.corr_heatmap | safe }}</div>
+        {% endif %}
+
+        {% if charts.corr_top_pairs_table %}
+          <div class="plot" style="margin-top:16px;">{{ charts.corr_top_pairs_table | safe }}</div>
+        {% endif %}
+
+        {% if charts.scatter_matrix %}
+          <div class="plot" style="margin-top:16px;">{{ charts.scatter_matrix | safe }}</div>
+          <div class="foot">Tip: select points to zoom into clusters/outliers across multiple axes.</div>
+        {% endif %}
+
+        {% if charts.scatter_3d %}
+          <div class="plot" style="margin-top:16px;">{{ charts.scatter_3d | safe }}</div>
+          <div class="foot">Tip: rotate the 3D plot and hover for point-level detail.</div>
+        {% endif %}
+      </div>
+
+      <!-- TAB: DISTRIBUTIONS -->
+      <div class="card tab distributions hidden">
+        <h2>Distributions & Shapes</h2>
+        <p class="desc">
+          Shape matters: skew, tails, and multi-modality affect modeling and outlier handling.
+        </p>
+
+        <div class="grid" style="margin-top:0;">
+          {% for k,v in charts.items() %}
+            {% if k.startswith("hist_") %}
+            <div class="card two" style="background: var(--card2);">
+              <h2 style="margin:0 0 8px 0; font-size:14px;">{{ k[5:] }}</h2>
+              <div class="plot">{{ v | safe }}</div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- TAB: DETAILS -->
+      <!-- TAB: DETAILS -->
+<div class="card tab details hidden">
+  <div class="sectionTitle">
+    <h2 style="margin:0;">Details</h2>
+    <div class="mini">What this report contains • How to interpret it</div>
+  </div>
+
+  <!-- Coverage summary -->
+  <div class="card" style="background: var(--card2);">
+    <h2 style="margin:0 0 8px 0; font-size:14px;">Report coverage</h2>
+    <p class="desc" style="margin:0;">
+      This report summarizes dataset structure, data quality signals (missingness, duplicates, outliers),
+      and variable relationships (correlations and scatter views). Use it to decide what to clean and what to model next.
+    </p>
+  </div>
+
+  <!-- What was generated (user-friendly) -->
+  <div class="card" style="background: var(--card2); margin-top:12px;">
+    <h2 style="margin:0 0 8px 0; font-size:14px;">What’s inside</h2>
+    <div class="desc" style="margin:0;">
+      <div style="margin-bottom:6px;">✅ Executive narrative (stakeholder-friendly insights)</div>
+      <div style="margin-bottom:6px;">✅ Quality diagnostics (missingness, duplicates, outliers, risk maps)</div>
+      <div style="margin-bottom:6px;">✅ Relationship views (correlation heatmap, top pairs, scatter matrix, 3D)</div>
+      <div style="margin-bottom:6px;">✅ Distribution views (histograms + box summaries)</div>
+      <div>✅ Optional categorical snapshot (only shown if a suitable categorical column exists)</div>
+    </div>
+  </div>
+
+  <!-- Categorical note (only if missing) -->
+  {% if not charts.top_categories %}
+  <div class="card" style="background: rgba(0,0,0,.14); margin-top:12px;">
+    <h2 style="margin:0 0 8px 0; font-size:14px;">Why you don’t see categorical charts</h2>
+    <p class="desc" style="margin:0;">
+      This dataset doesn’t contain a suitable low-cardinality categorical column (e.g., a “type”, “group”, or “class” field).
+      If you add one, this section will automatically show a category frequency chart.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- How to read correlations (helps users not misinterpret) -->
+  <div class="card" style="background: rgba(0,0,0,.14); margin-top:12px;">
+    <h2 style="margin:0 0 8px 0; font-size:14px;">Interpretation notes</h2>
+    <p class="desc" style="margin:0;">
+      Correlation shows association, not causation. Strong correlation can be caused by confounders, data collection effects,
+      or derived variables. Always validate with domain logic before making decisions.
+    </p>
+  </div>
+
+  <!-- Technical details (collapsed) -->
+  <details style="margin-top:12px;">
+    <summary class="tabbtn" style="display:inline-block; margin-top:0;">
+      Technical info
+    </summary>
+
+    <div class="card" style="background: rgba(0,0,0,.14); margin-top:10px;">
+      <p class="desc" style="margin:0;">
+  <span style="color:var(--muted);">Report ID:</span> <code>{{ run_id }}</code><br/>
+  <span style="color:var(--muted);">Render mode:</span>
+  <code>{{ "Offline (embedded Plotly.js)" if (plotly_mode|lower == "offline") else "Online (CDN Plotly.js)" }}</code><br/>
+  <span style="color:var(--muted);">Privacy:</span>
+  Internal file paths are intentionally hidden in this view.
+</p>
+
+    </div>
+  </details>
+
+  <!-- If there IS a categorical chart, show it here -->
+  {% if charts.top_categories %}
+    <div class="card" style="background: var(--card2); margin-top:12px;">
+      <h2 style="margin:0 0 8px 0; font-size:14px;">Categorical snapshot</h2>
+      <div class="plot">{{ charts.top_categories | safe }}</div>
+    </div>
+  {% endif %}
+</div>
+
+
+    </div>
+  </div>
+
+  <script>
+    // ---------------------------
+    // Tabs
+    // ---------------------------
+    const btns = Array.from(document.querySelectorAll('.tabbtn'));
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    function showTab(name){
+      tabs.forEach(t => {
+        const isTarget = t.classList.contains(name);
+        t.classList.toggle('hidden', !isTarget);
+      });
+      btns.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    btns.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+    // ---------------------------
+    // Insight search
+    // ---------------------------
+    const search = document.getElementById('insightSearch');
+    const list = document.getElementById('insightsList');
+    const countEl = document.getElementById('insightCount');
+
+    function updateCount(){
+      if (!list || !countEl) return;
+      const visible = Array.from(list.children).filter(x => !x.classList.contains('hidden')).length;
+      const total = list.children.length;
+      countEl.textContent = `Showing ${visible} of ${total} insights.`;
+    }
+
+    function filterInsights(q){
+      if (!list) return;
+      const query = (q || '').trim().toLowerCase();
+      Array.from(list.children).forEach(el => {
+        const txt = el.getAttribute('data-text') || '';
+        el.classList.toggle('hidden', query.length > 0 && !txt.includes(query));
+      });
+      updateCount();
+    }
+
+    if (search){
+      search.addEventListener('input', (e) => filterInsights(e.target.value));
+    }
+
+    updateCount();
+    showTab('narrative');
+  </script>
+</body>
+</html>

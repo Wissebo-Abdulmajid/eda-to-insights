@@ -15,6 +15,9 @@ from edainsights.quality.runner import run_quality_checks
 from edainsights.utils.hashing import file_sha256
 from edainsights.utils.logging import setup_logger
 
+# Milestone E
+from edainsights.reporting import build_html_report
+
 console = Console()
 app = typer.Typer(add_completion=False, help="EDA-to-Insights Framework CLI")
 
@@ -27,6 +30,10 @@ def run(
 ) -> None:
     """
     Run the EDA-to-Insights pipeline on a single dataset.
+    Produces:
+      - artifacts (csv/json)
+      - logs
+      - reports (interactive HTML)
     """
     cfg = load_config(config)
     ctx = make_run_context(out)
@@ -58,8 +65,7 @@ def run(
         },
         "config_path": str(config),
         "notes": [
-            "This run loads data, runs data-quality checks, generates a profiling summary, and writes artifacts.",
-            "Visualization and full HTML reporting will be added in later milestones.",
+            "This run loads data, runs data-quality checks, generates profiling artifacts, and writes an interactive HTML report.",
         ],
     }
 
@@ -112,10 +118,17 @@ def run(
     logger.info("Wrote: %s", summary_path)
 
     # -------------------------
-    # Milestone C: Profiling (CONFIG-DRIVEN)
+    # Milestone C: Profiling (config-driven)
     # -------------------------
+    # NOTE:
+    # cfg.profiling.top_k_categories is about "top categories to display",
+    # not "max unique for categorical inference". We'll set reasonable defaults:
+    #
+    # - max_unique_for_categorical: keep at 50 (heuristic)
+    # - max_value_counts_rows: controlled by top_k_categories
+    #
     prof_cfg = ProfileConfig(
-        max_unique_for_categorical=cfg.profiling.top_k_categories,
+        max_unique_for_categorical=50,
         max_value_counts_rows=cfg.profiling.top_k_categories,
         correlation_method=cfg.profiling.corr_method,
     )
@@ -150,8 +163,60 @@ def run(
         vc_df.to_csv(vc_path, index=False)
         logger.info("Wrote: %s", vc_path)
 
+    # -------------------------
+    # Milestone E: HTML report (interactive)
+    # -------------------------
+    # IMPORTANT: report belongs in reports/ (not artifacts/)
+    report_path = ctx.reports_dir / "report.html"
+    try:
+        build_html_report(
+            df=df,
+            artifacts_dir=ctx.artifacts_dir,
+            out_path=report_path,
+            project_name=cfg.project.name,
+            run_id=ctx.run_id,
+            config_path=str(config),
+            plotly_mode=cfg.reporting.plotly_mode,
+            include_corr=cfg.reporting.include_corr,
+            top_k_categories=cfg.profiling.top_k_categories,
+            corr_method=cfg.profiling.corr_method,
+        )
+        logger.info("Wrote: %s", report_path)
+    except Exception as e:
+        # We do not want the entire run to fail just because report generation broke.
+        logger.exception("HTML report generation failed: %s", e)
+    
+    # -------------------------
+    # Run Summary (single file for automation + portfolio)
+    # -------------------------
+    run_summary = {
+        "run_id": ctx.run_id,
+        "project": {"name": cfg.project.name, "version": cfg.project.version},
+        "paths": {
+            "artifacts_dir": str(ctx.artifacts_dir),
+            "reports_dir": str(ctx.reports_dir),
+            "logs_dir": str(ctx.logs_dir),
+            "report_html": str(report_path),
+        },
+        "dataset": {
+            "rows": int(df.shape[0]),
+            "cols": int(df.shape[1]),
+            "missing_cells": int(df.isna().sum().sum()),
+            "duplicate_rows": int(df.duplicated().sum()),
+        },
+        "quality": summary,  # your quality_summary.json content
+    }
+
+    run_summary_path = ctx.artifacts_dir / "run_summary.json"
+    run_summary_path.write_text(json.dumps(run_summary, indent=2), encoding="utf-8")
+    logger.info("Wrote: %s", run_summary_path)
+
+    # -------------------------
+    # Finish
+    # -------------------------
     console.print("[green]Run complete.[/green]")
     console.print(f"Artifacts: {ctx.artifacts_dir}")
+    console.print(f"Reports: {ctx.reports_dir}")
     console.print(f"Logs: {ctx.logs_dir}")
 
 

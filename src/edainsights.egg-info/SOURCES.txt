@@ -1,5 +1,6 @@
 pyproject.toml
 src/edainsights/__init__.py
+src/edainsights/app.py
 src/edainsights/cli.py
 src/edainsights/config.py
 src/edainsights/io.py
@@ -9,5 +10,12 @@ src/edainsights.egg-info/dependency_links.txt
 src/edainsights.egg-info/entry_points.txt
 src/edainsights.egg-info/requires.txt
 src/edainsights.egg-info/top_level.txt
+src/edainsights/profiling/__init__.py
+src/edainsights/profiling/basic_profiler.py
+src/edainsights/quality/checks.py
+src/edainsights/quality/runner.py
+src/edainsights/reporting/__init__.py
+src/edainsights/reporting/html_report.py
+src/edainsights/reporting/insights_engine.py
 src/edainsights/utils/hashing.py
 src/edainsights/utils/logging.py

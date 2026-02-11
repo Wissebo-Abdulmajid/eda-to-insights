@@ -7,19 +7,69 @@ io:
   csv:
     delimiter: ";"
     encoding: "utf-8"
+    na_values: ["", "NA", "N/A", "null", "NULL", "None"]
 
 quality:
+  missing_threshold: 0.10
   missingness_warn: 0.05
   missingness_fail: 0.40
   duplicate_warn: 0.01
-  missing_threshold: 0.10
 
 profiling:
   top_k_categories: 10
   corr_method: "pearson"
+  max_unique_for_categorical: 50
+  max_value_counts_rows: 30
+
+reporting:
+  plotly_mode: "offline"   # or "cdn"
+  sample_rows: 20
+  include_corr: true
+
+  # Option B: HTML report output
+  html_report: true
+  html_filename: "report.html"
+
+  # Control report sections
+  include_quality_section: true
+  include_profiling_section: true
+  include_visuals: true
+
+  # Optional custom title (leave null to auto-title)
+  title: null
+
+visuals:
+  enabled: true
+  backend: "plotly"        # interactive
+  enable_3d: true          # allow 3D plots when meaningful
+  max_plots: 20            # cap so it doesn't become heavy
+  static_format: "png"     # future static export option
+
+ai_insights:
+  enabled: true
+  max_insights: 12
+  tone: "mixed"            # business + technical balance
 
 reporting:
   sample_rows: 20
   include_corr: true
+
+  # HTML report output
+  html_report: true
+  html_filename: "report.html"
+
+  # Plotly JS loading mode:
+  # - offline: embed plotly.js directly in report (works without internet, bigger file)
+  # - cdn: load plotly.js from CDN (smaller file, needs internet)
+  plotly_mode: "offline"   # offline | cdn
+
+  # Control report sections
+  include_quality_section: true
+  include_profiling_section: true
+  include_visuals: true
+
+  title: null
+
 logging:
   level: "INFO"
+

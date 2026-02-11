@@ -1,2 +1,3 @@
 [console_scripts]
 edainsights = edainsights.cli:app
+edainsights-ui = edainsights.app:main

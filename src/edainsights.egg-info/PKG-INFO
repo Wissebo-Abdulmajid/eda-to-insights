@@ -14,3 +14,5 @@ Requires-Dist: rich>=13.7
 Requires-Dist: matplotlib>=3.9
 Requires-Dist: jinja2>=3.1
 Requires-Dist: markdown-it-py>=3.0
+Requires-Dist: streamlit>=1.36
+Requires-Dist: plotly>=5.22

@@ -15,10 +15,14 @@ dependencies = [
   "matplotlib>=3.9",
   "jinja2>=3.1",
   "markdown-it-py>=3.0",
+  "streamlit>=1.36",
+  "plotly>=5.22",
+  "openpyxl>=3.1"
 ]
 
 [project.scripts]
 edainsights = "edainsights.cli:app"
+edainsights-ui = "edainsights.app:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -30,3 +34,12 @@ target-version = "py311"
 
 [tool.black]
 line-length = 100
+
+[tool.setuptools.package-data]
+edainsights = ["templates/**/*.j2", "templates/**/*.html", "templates/**/*"]
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
